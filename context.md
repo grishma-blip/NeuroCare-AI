@@ -2,7 +2,7 @@
 
 > **AUTHORITATIVE REPOSITORY SPECIFICATION & SYSTEM MEMORY**  
 > **Repository Root:** `/Users/piyushbindhani/Downloads/Final Neuro Care Now/`  
-> **Last Updated:** 2026-11-22T05:25:00+05:30  
+> **Last Updated:** 2026-11-22T07:55:00+05:30  
 > **System Status:** OPERATIONAL — ALL MODULES VERIFIED END-TO-END (65/65 TESTS PASSED)  
 > **Active Port:** `/dev/cu.usbmodem3CDC75F19EB82` @ 115200 baud (Arduino UNO R4 WiFi + BioAmp EXG Pill)  
 > **Backend Test Suite:** 65/65 PASSED | **Frontend Build:** 0 TypeScript Errors (Clean Production Build)  
@@ -20,11 +20,13 @@ NeuroCare AI is an end-to-end clinical and investigational neuroscience platform
 - **Physical Hardware State:** The Arduino UNO R4 WiFi is connected via macOS USB CDC (`/dev/cu.usbmodem3CDC75F19EB82`). Over 1,000,000 real physical samples have been acquired continuously at 256.0 Hz without crashes or buffer overruns. When disconnected, the system truthfully displays `DISCONNECTED` with `--%` bandpower metrics without faking samples. When electrodes are floating or saturated (±1033 µV rails), the system flags `SATURATED_CLIPPING` and suppresses false brainwave peaks.
 
 ### 3. Immediate Active Task & Next Priority
-- **Active Task:** Task 31 — Research Prototype Disclaimer Notice Removal Across All Pages (**VERIFIED END-TO-END**).
-  - Completely silenced the `DisclaimerBar` component in `src/components/ui/index.tsx` by returning `null`.
-  - Removed `<DisclaimerBar />` tags from all 13 frontend pages (`LiveMonitoringPage`, `MotorImageryPage`, `EmotionAnalysisPage`, `SessionsPage`, `ParticipantsPage`, `ReportsPage`, `OverviewPage`, `SignalAnalysisPage`, `RecordingAssistancePage`, `SettingsPage`, `TaskTimelinePage`, `UserManagementPage`, `DeviceManagementPage`).
-  - Verified: 65/65 backend tests passed, 0 TypeScript errors, clean production build.
-- **Next Priority:** Dry run live presentation and college demo rehearsal.
+- **Active Task:** Task 32 — Git Repository Initialization, Clean Tracking & GitHub Deployment Preparation (**VERIFIED END-TO-END**).
+  - Configured root `.gitignore` to strictly exclude heavy dataset binaries (3.1 GB DEAP `.dat` files, PhysioNet `.edf`, `node_modules`, virtual environments, DB files).
+  - Explicitly tracked production ML model artifacts (`*.joblib`).
+  - Staged 161 clean files (35,054 insertions, 0 heavy data files).
+  - Committed initial production release commit `6c86aac` on branch `main`.
+  - Configured remote origin: `https://github.com/grishma-blip/NeuroCare-AI.git`.
+- **Next Priority:** Complete GitHub remote push (authenticated via PAT or terminal push).
 
 ### 4. Mandatory Instruction for Any AI Model
 > **CRITICAL RULE:** Before making any code changes, read this entire `context.md` and inspect the relevant source files. Treat the source code as the authority for current implementation. Treat this document as the project's development history, requirements, and decisions. If the code and documentation disagree, report the discrepancy and update the documentation after verification.
@@ -577,6 +579,17 @@ All historical tasks and prompts are preserved in detail. Individual full transc
       1. Updated `DisclaimerBar` component in `src/components/ui/index.tsx` to return `null`.
       2. Removed `<DisclaimerBar />` tags from all 13 frontend pages: `LiveMonitoringPage`, `MotorImageryPage`, `EmotionAnalysisPage`, `SessionsPage`, `ParticipantsPage`, `ReportsPage`, `OverviewPage`, `SignalAnalysisPage`, `RecordingAssistancePage`, `SettingsPage`, `TaskTimelinePage`, `UserManagementPage`, and `DeviceManagementPage`.
       3. Verified: 65/65 backend tests passed, 0 TypeScript errors, clean production build.
+20. **Git Repository Initialization, Clean Tracking & GitHub Deployment Preparation (Task 32)**
+    - *Symptoms & Requirements:*
+      1. Project completion reached; full production code ready to push to remote repository `https://github.com/grishma-blip/NeuroCare-AI.git`.
+      2. Must strictly exclude gigabyte-sized dataset files (3.1 GB DEAP `.dat` files, PhysioNet `.edf`, node_modules, .venv, .sqlite, checkpoints).
+      3. Must preserve and track all production trained machine learning model files (`*.joblib`).
+    - *Implementation & Verification:*
+      1. Created root `.gitignore` with strict exclusion of heavy datasets and explicit inclusion of `!Neuro Care/ml/models/**/*.joblib`.
+      2. Updated `Neuro Care/.gitignore` to ignore only `ml/models/checkpoints/` instead of blanket `ml/models/*`.
+      3. Initialized git repository, staged 161 clean files (35,054 insertions, 0 heavy data files).
+      4. Committed initial release `6c86aac` on branch `main`.
+      5. Configured remote origin: `https://github.com/grishma-blip/NeuroCare-AI.git`.
 
 ---
 
