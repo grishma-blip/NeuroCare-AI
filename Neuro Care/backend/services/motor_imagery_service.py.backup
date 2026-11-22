@@ -1,0 +1,142 @@
+from pathlib import Path
+
+import joblib
+import mne
+import numpy as np
+
+from backend.core.logger import get_logger
+
+logger = get_logger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+MODEL_PATH = (
+    PROJECT_ROOT
+    / "ml"
+    / "models"
+    / "motor_imagery"
+    / "binary_motor_imagery_csp_lda.joblib"
+)
+
+TARGET_SAMPLING_RATE = 128
+EXPECTED_CHANNELS = 64
+EPOCH_SAMPLES = 385
+LOW_FREQUENCY = 8.0
+HIGH_FREQUENCY = 30.0
+
+
+class MotorImageryService:
+    def __init__(self):
+        self.model = None
+
+    def load_model(self):
+        if self.model is not None:
+            return
+
+        if not MODEL_PATH.exists():
+            raise FileNotFoundError(
+                f"Motor imagery model not found: {MODEL_PATH}"
+            )
+
+        self.model = joblib.load(MODEL_PATH)
+        logger.info("Binary motor imagery model loaded successfully")
+
+    def predict(self, samples, sampling_rate, channel_names):
+        self.load_model()
+
+        data = np.asarray(samples, dtype=np.float64)
+
+        if data.ndim != 2:
+            raise ValueError("EEG samples must be a 2D array")
+
+        if data.shape[1] != EXPECTED_CHANNELS:
+            raise ValueError(
+                f"Expected {EXPECTED_CHANNELS} EEG channels; "
+                f"received {data.shape[1]}"
+            )
+
+        if len(channel_names) != EXPECTED_CHANNELS:
+            raise ValueError("Exactly 64 channel names are required")
+
+        if len(set(channel_names)) != EXPECTED_CHANNELS:
+            raise ValueError("Channel names must be unique")
+
+        if not np.isfinite(data).all():
+            raise ValueError("EEG samples contain invalid numeric values")
+
+        if not isinstance(sampling_rate, (int, float)) or sampling_rate <= 0:
+            raise ValueError("Sampling rate must be positive")
+
+        if data.shape[0] < int(sampling_rate * 3.5):
+            raise ValueError("At least 3.5 seconds of EEG data is required")
+
+        info = mne.create_info(
+            ch_names=channel_names,
+            sfreq=float(sampling_rate),
+            ch_types=["eeg"] * EXPECTED_CHANNELS
+        )
+
+        raw = mne.io.RawArray(data.T, info, verbose="ERROR")
+
+        try:
+            raw.resample(
+                TARGET_SAMPLING_RATE,
+                npad="auto",
+                verbose="ERROR"
+            )
+
+            raw.filter(
+                l_freq=LOW_FREQUENCY,
+                h_freq=HIGH_FREQUENCY,
+                picks="eeg",
+                verbose="ERROR"
+            )
+
+            raw.set_eeg_reference(
+                "average",
+                projection=False,
+                verbose="ERROR"
+            )
+
+            filtered = raw.get_data()
+
+        finally:
+            raw.close()
+
+        start = int(0.5 * TARGET_SAMPLING_RATE)
+        stop = start + EPOCH_SAMPLES
+
+        if filtered.shape[1] < stop:
+            raise ValueError(
+                "Insufficient samples after resampling for a 3-second epoch"
+            )
+
+        epoch = filtered[:, start:stop].astype(np.float32)
+        X = epoch[np.newaxis, :, :]
+
+        prediction = int(self.model.predict(X)[0])
+        probabilities = self.model.predict_proba(X)[0]
+
+        label = "Right" if prediction == 1 else "Left"
+        confidence = float(probabilities[prediction])
+
+        return {
+            "classification": label,
+            "predicted_label": prediction,
+            "confidence": confidence,
+            "probabilities": {
+                "left": float(probabilities[0]),
+                "right": float(probabilities[1])
+            },
+            "input_shape": list(X.shape),
+            "sampling_rate": TARGET_SAMPLING_RATE,
+            "epoch_duration_seconds": 3.0,
+            "model_name": "CSP + StandardScaler + LDA",
+            "is_experimental": True,
+            "disclaimer": (
+                "Experimental EEG motor imagery prediction. "
+                "Not intended for medical diagnosis or clinical decisions."
+            )
+        }
+
+
+motor_imagery_service = MotorImageryService()

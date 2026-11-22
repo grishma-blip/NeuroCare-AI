@@ -1,0 +1,27 @@
+# Backend and API
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+python-multipart
+websockets
+
+# Hardware communication
+pyserial
+
+# EEG signal processing
+numpy
+scipy
+pandas
+
+# Machine learning
+scikit-learn
+joblib
+
+# Visualisation
+matplotlib
+seaborn
+
+# Testing
+pytest
+httpx

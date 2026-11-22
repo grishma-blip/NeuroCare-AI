@@ -1,0 +1,38 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Generated ML artifacts
+ml/models/checkpoints/
+
+# Dataset and private EEG recordings
+data/raw/*
+data/processed/*
+data/recordings/*
+ml/datasets/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/recordings/.gitkeep
+!ml/datasets/.gitkeep
+
+# OS files
+.DS_Store

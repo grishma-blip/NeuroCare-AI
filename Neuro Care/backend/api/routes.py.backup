@@ -1,0 +1,321 @@
+import logging
+from datetime import datetime, timezone
+
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
+from pymongo.errors import PyMongoError, DuplicateKeyError
+
+from backend.core.schemas import DeviceStatusResponse
+from backend.core.database import database
+from backend.models.participant_model import (
+    create_participant_document,
+    serialize_participant,
+    PARTICIPANT_STATUSES
+)
+from backend.models.recording_session_model import (
+    create_session_document,
+    serialize_session,
+    SESSION_STATUSES,
+    DATA_MODES
+)
+from backend.services.serial_service import serial_service
+
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+participants_collection = database["participants"]
+sessions_collection = database["recording_sessions"]
+
+
+# -------------------- REQUEST SCHEMAS --------------------
+
+class ParticipantCreate(BaseModel):
+    participant_code: str = Field(min_length=1, max_length=50)
+    age: int = Field(ge=18, le=120)
+    gender: str = Field(min_length=1, max_length=30)
+    consent_obtained: bool
+    created_by: str = Field(min_length=1, max_length=100)
+
+
+class ParticipantStatusUpdate(BaseModel):
+    status: str
+
+
+class SessionCreate(BaseModel):
+    participant_id: str
+    created_by: str = Field(min_length=1, max_length=100)
+    data_mode: str = "HARDWARE"
+    sampling_rate: int | None = Field(default=None, gt=0)
+    channel_count: int = Field(default=1, ge=1)
+    protocol_name: str = Field(default="Unassigned", min_length=1, max_length=100)
+
+
+# -------------------- DEVICE API --------------------
+
+@router.get("/device/status", response_model=DeviceStatusResponse)
+def get_device_status():
+    return serial_service.get_status()
+
+
+# -------------------- PARTICIPANT APIs --------------------
+
+@router.post("/participants", status_code=201)
+def register_participant(payload: ParticipantCreate):
+    try:
+        participant = create_participant_document(
+            participant_code=payload.participant_code,
+            age=payload.age,
+            gender=payload.gender,
+            consent_obtained=payload.consent_obtained,
+            created_by=payload.created_by
+        )
+
+        result = participants_collection.insert_one(participant)
+        participant["_id"] = result.inserted_id
+
+        logger.info("Participant registered: %s", participant["participant_code"])
+
+        return {
+            "message": "Participant registered successfully",
+            "participant": serialize_participant(participant)
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="Participant code already exists")
+    except PyMongoError:
+        logger.exception("Participant registration failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.get("/participants")
+def get_participants(status: str | None = Query(default=None)):
+    query = {}
+
+    if status:
+        if status not in PARTICIPANT_STATUSES:
+            raise HTTPException(status_code=400, detail="Invalid participant status")
+        query["status"] = status
+
+    try:
+        participants = participants_collection.find(query).sort("created_at", -1)
+        return {
+            "total": participants_collection.count_documents(query),
+            "participants": [serialize_participant(item) for item in participants]
+        }
+    except PyMongoError:
+        logger.exception("Fetching participants failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.get("/participants/{participant_id}")
+def get_participant(participant_id: str):
+    if not ObjectId.is_valid(participant_id):
+        raise HTTPException(status_code=400, detail="Invalid participant ID")
+
+    try:
+        participant = participants_collection.find_one({"_id": ObjectId(participant_id)})
+        if not participant:
+            raise HTTPException(status_code=404, detail="Participant not found")
+        return serialize_participant(participant)
+    except PyMongoError:
+        logger.exception("Fetching participant failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.patch("/participants/{participant_id}/status")
+def update_participant_status(participant_id: str, payload: ParticipantStatusUpdate):
+    if not ObjectId.is_valid(participant_id):
+        raise HTTPException(status_code=400, detail="Invalid participant ID")
+
+    if payload.status not in PARTICIPANT_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid participant status")
+
+    try:
+        result = participants_collection.update_one(
+            {"_id": ObjectId(participant_id)},
+            {"$set": {
+                "status": payload.status,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Participant not found")
+
+        return {
+            "message": "Participant status updated successfully",
+            "status": payload.status
+        }
+    except PyMongoError:
+        logger.exception("Updating participant status failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+# -------------------- RECORDING SESSION APIs --------------------
+
+@router.post("/sessions", status_code=201)
+def create_recording_session(payload: SessionCreate):
+    try:
+        if payload.data_mode not in DATA_MODES:
+            raise HTTPException(status_code=400, detail="Invalid data mode")
+
+        if not ObjectId.is_valid(payload.participant_id):
+            raise HTTPException(status_code=400, detail="Invalid participant ID")
+
+        participant = participants_collection.find_one(
+            {"_id": ObjectId(payload.participant_id)}
+        )
+
+        if not participant:
+            raise HTTPException(status_code=404, detail="Participant not found")
+
+        if participant.get("status") != "active":
+            raise HTTPException(status_code=400, detail="Participant is not active")
+
+        session = create_session_document(
+            participant_id=payload.participant_id,
+            created_by=payload.created_by,
+            data_mode=payload.data_mode,
+            sampling_rate=payload.sampling_rate,
+            channel_count=payload.channel_count,
+            protocol_name=payload.protocol_name
+        )
+
+        result = sessions_collection.insert_one(session)
+        session["_id"] = result.inserted_id
+
+        logger.info("Recording session created: %s", session["session_code"])
+
+        return {
+            "message": "Recording session created successfully",
+            "session": serialize_session(session)
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except PyMongoError:
+        logger.exception("Creating recording session failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.get("/sessions")
+def get_recording_sessions(
+    status: str | None = Query(default=None),
+    participant_id: str | None = Query(default=None)
+):
+    query = {}
+
+    if status:
+        if status not in SESSION_STATUSES:
+            raise HTTPException(status_code=400, detail="Invalid session status")
+        query["status"] = status
+
+    if participant_id:
+        if not ObjectId.is_valid(participant_id):
+            raise HTTPException(status_code=400, detail="Invalid participant ID")
+        query["participant_id"] = participant_id
+
+    try:
+        sessions = sessions_collection.find(query).sort("created_at", -1)
+        return {
+            "total": sessions_collection.count_documents(query),
+            "sessions": [serialize_session(item) for item in sessions]
+        }
+    except PyMongoError:
+        logger.exception("Fetching recording sessions failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.get("/sessions/{session_id}")
+def get_recording_session(session_id: str):
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session ID")
+
+    try:
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        if not session:
+            raise HTTPException(status_code=404, detail="Recording session not found")
+        return serialize_session(session)
+    except PyMongoError:
+        logger.exception("Fetching recording session failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.patch("/sessions/{session_id}/start")
+def start_recording_session(session_id: str):
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session ID")
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        result = sessions_collection.update_one(
+            {"_id": ObjectId(session_id), "status": "scheduled"},
+            {"$set": {
+                "status": "recording",
+                "started_at": now,
+                "updated_at": now
+            }}
+        )
+
+        if result.modified_count == 0:
+            existing = sessions_collection.find_one({"_id": ObjectId(session_id)})
+            if not existing:
+                raise HTTPException(status_code=404, detail="Recording session not found")
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot start session with status '{existing.get('status')}'"
+            )
+
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        logger.info("Recording session started: %s", session_id)
+
+        return {
+            "message": "Recording session started successfully",
+            "session": serialize_session(session)
+        }
+    except PyMongoError:
+        logger.exception("Starting recording session failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")
+
+
+@router.patch("/sessions/{session_id}/stop")
+def stop_recording_session(session_id: str):
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session ID")
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        result = sessions_collection.update_one(
+            {"_id": ObjectId(session_id), "status": "recording"},
+            {"$set": {
+                "status": "completed",
+                "ended_at": now,
+                "updated_at": now
+            }}
+        )
+
+        if result.modified_count == 0:
+            existing = sessions_collection.find_one({"_id": ObjectId(session_id)})
+            if not existing:
+                raise HTTPException(status_code=404, detail="Recording session not found")
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot stop session with status '{existing.get('status')}'"
+            )
+
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        logger.info("Recording session completed: %s", session_id)
+
+        return {
+            "message": "Recording session completed successfully",
+            "session": serialize_session(session)
+        }
+    except PyMongoError:
+        logger.exception("Stopping recording session failed")
+        raise HTTPException(status_code=500, detail="Database operation failed")

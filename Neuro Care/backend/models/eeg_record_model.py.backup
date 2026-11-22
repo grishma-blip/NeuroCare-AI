@@ -1,0 +1,50 @@
+from datetime import datetime, timezone
+from bson import ObjectId
+
+
+def create_eeg_record_document(
+    session_id: str,
+    samples: list,
+    sampling_rate: int,
+    channel_names: list,
+    data_mode: str
+):
+    if not ObjectId.is_valid(session_id):
+        raise ValueError("Invalid session ID")
+
+    if not samples:
+        raise ValueError("EEG samples cannot be empty")
+
+    if sampling_rate <= 0:
+        raise ValueError("Sampling rate must be positive")
+
+    if not channel_names:
+        raise ValueError("Channel names are required")
+
+    if data_mode not in {"HARDWARE", "REPLAY", "SIMULATION"}:
+        raise ValueError("Invalid data mode")
+
+    return {
+        "session_id": ObjectId(session_id),
+        "samples": samples,
+        "sampling_rate": sampling_rate,
+        "channel_names": channel_names,
+        "data_mode": data_mode,
+        "sample_count": len(samples),
+        "recorded_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(timezone.utc)
+    }
+
+
+def serialize_eeg_record(record: dict):
+    return {
+        "id": str(record.get("_id", "")),
+        "session_id": str(record.get("session_id", "")),
+        "samples": record.get("samples", []),
+        "sampling_rate": record.get("sampling_rate"),
+        "channel_names": record.get("channel_names", []),
+        "data_mode": record.get("data_mode"),
+        "sample_count": record.get("sample_count"),
+        "recorded_at": record.get("recorded_at"),
+        "created_at": record.get("created_at")
+    }

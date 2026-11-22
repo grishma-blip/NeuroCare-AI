@@ -1,0 +1,19 @@
+Accuracy: 0.4187
+
+              precision    recall  f1-score   support
+
+        Rest       0.64      0.37      0.47       990
+        Left       0.31      0.54      0.39       500
+       Right       0.36      0.40      0.38       490
+
+    accuracy                           0.42      1980
+   macro avg       0.44      0.43      0.41      1980
+weighted avg       0.49      0.42      0.43      1980
+
+Confusion matrix:
+[[366 404 220]
+ [108 268 124]
+ [100 195 195]]
+
+Training subjects: [np.str_('S002'), np.str_('S003'), np.str_('S004'), np.str_('S006'), np.str_('S007'), np.str_('S008'), np.str_('S009'), np.str_('S010'), np.str_('S014'), np.str_('S015'), np.str_('S016'), np.str_('S017'), np.str_('S018'), np.str_('S020'), np.str_('S021'), np.str_('S022'), np.str_('S023'), np.str_('S024'), np.str_('S025'), np.str_('S026'), np.str_('S027'), np.str_('S028'), np.str_('S029'), np.str_('S030'), np.str_('S032'), np.str_('S033'), np.str_('S034'), np.str_('S035'), np.str_('S036'), np.str_('S038'), np.str_('S039'), np.str_('S040'), np.str_('S041'), np.str_('S042'), np.str_('S044'), np.str_('S045'), np.str_('S047'), np.str_('S048'), np.str_('S049'), np.str_('S050'), np.str_('S051'), np.str_('S052'), np.str_('S053'), np.str_('S054'), np.str_('S055'), np.str_('S056'), np.str_('S058'), np.str_('S059'), np.str_('S060'), np.str_('S061'), np.str_('S062'), np.str_('S063'), np.str_('S064'), np.str_('S066'), np.str_('S067'), np.str_('S068'), np.str_('S070'), np.str_('S072'), np.str_('S074'), np.str_('S075'), np.str_('S076'), np.str_('S077'), np.str_('S078'), np.str_('S083'), np.str_('S084'), np.str_('S086'), np.str_('S087'), np.str_('S088'), np.str_('S089'), np.str_('S090'), np.str_('S091'), np.str_('S092'), np.str_('S093'), np.str_('S094'), np.str_('S095'), np.str_('S096'), np.str_('S098'), np.str_('S099'), np.str_('S100'), np.str_('S101'), np.str_('S102'), np.str_('S103'), np.str_('S104'), np.str_('S105'), np.str_('S106'), np.str_('S107'), np.str_('S109')]
+Testing subjects: [np.str_('S001'), np.str_('S005'), np.str_('S011'), np.str_('S012'), np.str_('S013'), np.str_('S019'), np.str_('S031'), np.str_('S037'), np.str_('S043'), np.str_('S046'), np.str_('S057'), np.str_('S065'), np.str_('S069'), np.str_('S071'), np.str_('S073'), np.str_('S079'), np.str_('S080'), np.str_('S081'), np.str_('S082'), np.str_('S085'), np.str_('S097'), np.str_('S108')]
