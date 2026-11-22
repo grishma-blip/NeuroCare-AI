@@ -2,7 +2,7 @@
 
 > **AUTHORITATIVE REPOSITORY SPECIFICATION & SYSTEM MEMORY**  
 > **Repository Root:** `/Users/piyushbindhani/Downloads/Final Neuro Care Now/`  
-> **Last Updated:** 2026-11-22T07:55:00+05:30  
+> **Last Updated:** 2026-11-22T08:00:00+05:30  
 > **System Status:** OPERATIONAL — ALL MODULES VERIFIED END-TO-END (65/65 TESTS PASSED)  
 > **Active Port:** `/dev/cu.usbmodem3CDC75F19EB82` @ 115200 baud (Arduino UNO R4 WiFi + BioAmp EXG Pill)  
 > **Backend Test Suite:** 65/65 PASSED | **Frontend Build:** 0 TypeScript Errors (Clean Production Build)  
@@ -20,13 +20,12 @@ NeuroCare AI is an end-to-end clinical and investigational neuroscience platform
 - **Physical Hardware State:** The Arduino UNO R4 WiFi is connected via macOS USB CDC (`/dev/cu.usbmodem3CDC75F19EB82`). Over 1,000,000 real physical samples have been acquired continuously at 256.0 Hz without crashes or buffer overruns. When disconnected, the system truthfully displays `DISCONNECTED` with `--%` bandpower metrics without faking samples. When electrodes are floating or saturated (±1033 µV rails), the system flags `SATURATED_CLIPPING` and suppresses false brainwave peaks.
 
 ### 3. Immediate Active Task & Next Priority
-- **Active Task:** Task 32 — Git Repository Initialization, Clean Tracking & GitHub Deployment Preparation (**VERIFIED END-TO-END**).
-  - Configured root `.gitignore` to strictly exclude heavy dataset binaries (3.1 GB DEAP `.dat` files, PhysioNet `.edf`, `node_modules`, virtual environments, DB files).
-  - Explicitly tracked production ML model artifacts (`*.joblib`).
-  - Staged 161 clean files (35,054 insertions, 0 heavy data files).
-  - Committed initial production release commit `6c86aac` on branch `main`.
-  - Configured remote origin: `https://github.com/grishma-blip/NeuroCare-AI.git`.
-- **Next Priority:** Complete GitHub remote push (authenticated via PAT or terminal push).
+- **Active Task:** Task 33 — Vercel Deployment & SPA Routing Configuration (**VERIFIED END-TO-END**).
+  - Created `Neuro Care AI Frontend/vercel.json` and root `vercel.json` with SPA catch-all rewrites (`/(.*) -> /index.html`).
+  - Updated `src/lib/api.ts` to dynamically accept `VITE_API_URL` and `VITE_WS_URL` environment variables for decoupled cloud backends.
+  - Successfully built frontend in 1.66s and deployed live via Vercel CLI.
+  - Live temporary deployment: `https://prompt-spinel-gxccm4p.tmp.now` (Claim link: `https://vercel.com/claim-deployment?code=7d834187-146e-4dc0-a80f-15b994a564ff`).
+- **Next Priority:** Claim deployment on Vercel and link GitHub repo for automated CI/CD.
 
 ### 4. Mandatory Instruction for Any AI Model
 > **CRITICAL RULE:** Before making any code changes, read this entire `context.md` and inspect the relevant source files. Treat the source code as the authority for current implementation. Treat this document as the project's development history, requirements, and decisions. If the code and documentation disagree, report the discrepancy and update the documentation after verification.
@@ -590,6 +589,17 @@ All historical tasks and prompts are preserved in detail. Individual full transc
       3. Initialized git repository, staged 161 clean files (35,054 insertions, 0 heavy data files).
       4. Committed initial release `6c86aac` on branch `main`.
       5. Configured remote origin: `https://github.com/grishma-blip/NeuroCare-AI.git`.
+21. **Vercel Deployment & SPA Routing Configuration (Task 33)**
+    - *Symptoms & Requirements:*
+      1. Deploy the React + Vite frontend to Vercel for public cloud accessibility.
+      2. Ensure SPA client-side routes (e.g. `/live`, `/motor-imagery`, `/reports`, `/participants`) do not return 404 upon browser reload.
+      3. Enable configurable backend and WebSocket URLs via environment variables (`VITE_API_URL`, `VITE_WS_URL`).
+    - *Implementation & Verification:*
+      1. Created `Neuro Care AI Frontend/vercel.json` and root `vercel.json` with SPA routing rewrites to `/index.html`.
+      2. Updated `src/lib/api.ts` to read `import.meta.env.VITE_API_URL` and `import.meta.env.VITE_WS_URL` with backward compatibility to local port 5173 / 8000.
+      3. Executed `npx vercel deploy --temporary --yes` in `Neuro Care AI Frontend/`. Production build completed in 1.66s.
+      4. Generated live temporary deployment: `https://prompt-spinel-gxccm4p.tmp.now` (Claim link: `https://vercel.com/claim-deployment?code=7d834187-146e-4dc0-a80f-15b994a564ff`).
+      5. Committed configuration changes to branch `main`.
 
 ---
 
