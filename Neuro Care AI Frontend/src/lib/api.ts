@@ -18,7 +18,7 @@ import type {
 } from '@/types';
 
 const isDevPort = typeof window !== 'undefined' && window.location.port === '5173';
-const BASE_URL = isDevPort ? 'http://127.0.0.1:8000/api' : '/api';
+const BASE_URL = (import.meta.env.VITE_API_URL as string) || (isDevPort ? 'http://127.0.0.1:8000/api' : '/api');
 
 // Create configured Axios client
 export const apiClient: AxiosInstance = axios.create({
@@ -754,8 +754,8 @@ export function connectEegWebSocket(
   let reconnectTimer: any = null;
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.port === '5173' ? '127.0.0.1:8000' : window.location.host;
-  const wsUrl = `${protocol}//${host}/ws/eeg`;
+  const defaultWsHost = window.location.port === '5173' ? '127.0.0.1:8000' : window.location.host;
+  const wsUrl = (import.meta.env.VITE_WS_URL as string) || `${protocol}//${defaultWsHost}/ws/eeg`;
 
   function connect() {
     if (isClosed) return;

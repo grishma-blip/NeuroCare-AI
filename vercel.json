@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd \"Neuro Care AI Frontend\" && npm install && npm run build",
+  "outputDirectory": "Neuro Care AI Frontend/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
