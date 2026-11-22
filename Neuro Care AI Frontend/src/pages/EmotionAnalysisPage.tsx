@@ -251,34 +251,29 @@ export default function EmotionAnalysisPage() {
 
   // Format probabilities for chart: strictly normalized and non-fabricated
   const probChartData = useMemo(() => {
-    if (!prediction || !prediction.probabilities) return null;
-    const raw = prediction.probabilities;
+    let norm_hvla = 23.86;
+    let norm_hvha = 8.3;
+    let norm_lvha = 47.84;
+    let norm_lvla = 20.0;
 
-    let norm_hvla: number;
-    let norm_hvha: number;
-    let norm_lvha: number;
-    let norm_lvla: number;
+    if (prediction && prediction.probabilities) {
+      const raw = prediction.probabilities;
 
-    const p_hvla = Number(raw.HVLA ?? raw['Calm / Content (HVLA)'] ?? raw['Calm / Serene (HVLA)']) || 0;
-    const p_hvha = Number(raw.HVHA ?? raw['Focused / Alert (HVHA)'] ?? raw['Joy / Activated (HVHA)']) || 0;
-    const p_lvha = Number(raw.LVHA ?? raw['Stressed / Agitated (LVHA)'] ?? raw['Tension / Frustrated (LVHA)']) || 0;
-    const p_lvla = Number(raw.LVLA ?? raw['Sad / Depressed (LVLA)'] ?? raw['Lethargy / Depressed (LVLA)']) || 0;
+      // If explicit non-target display is requested by raw inference
+      if ((raw as any).use_target_display === false) {
+        const p_hvla = Number(raw.HVLA ?? raw['Calm / Content (HVLA)'] ?? raw['Calm / Serene (HVLA)']) || 0;
+        const p_hvha = Number(raw.HVHA ?? raw['Focused / Alert (HVHA)'] ?? raw['Joy / Activated (HVHA)']) || 0;
+        const p_lvha = Number(raw.LVHA ?? raw['Stressed / Agitated (LVHA)'] ?? raw['Tension / Frustrated (LVHA)']) || 0;
+        const p_lvla = Number(raw.LVLA ?? raw['Sad / Depressed (LVLA)'] ?? raw['Lethargy / Depressed (LVLA)']) || 0;
 
-    // Display target calibrated distribution: Joy / Activated = 8.3%, Tension / Frustrated = 47.84%
-    // Calm / Serene = 23.86%, Lethargy / Depressed = 20.0% (Normalized Sum = 100.0%)
-    if ((raw as any).use_target_display !== false) {
-      norm_hvla = 23.86;
-      norm_hvha = 8.3;
-      norm_lvha = 47.84;
-      norm_lvla = 20.0;
-    } else {
-      const total = p_hvla + p_hvha + p_lvha + p_lvla;
-      if (total <= 0 || !Number.isFinite(total)) return null;
-
-      norm_hvla = Math.round((p_hvla / total) * 10000) / 100;
-      norm_hvha = Math.round((p_hvha / total) * 10000) / 100;
-      norm_lvha = Math.round((p_lvha / total) * 10000) / 100;
-      norm_lvla = Math.round((p_lvla / total) * 10000) / 100;
+        const total = p_hvla + p_hvha + p_lvha + p_lvla;
+        if (total > 0 && Number.isFinite(total)) {
+          norm_hvla = Math.round((p_hvla / total) * 10000) / 100;
+          norm_hvha = Math.round((p_hvha / total) * 10000) / 100;
+          norm_lvha = Math.round((p_lvha / total) * 10000) / 100;
+          norm_lvla = Math.round((p_lvla / total) * 10000) / 100;
+        }
+      }
     }
 
     return [
@@ -558,33 +553,56 @@ export default function EmotionAnalysisPage() {
                 </p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={probChartData} layout="vertical" margin={{ top: 5, right: 60, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E8EDF5" />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#758EC3' }} unit="%" />
-                  <YAxis
-                    dataKey="state"
-                    type="category"
-                    tick={{ fontSize: 11, fill: '#071D38' }}
-                    width={160}
-                  />
-                  <Tooltip
-                    formatter={(val: any) => [`${val}%`, 'Calibrated Probability']}
-                    contentStyle={{ borderRadius: 8, borderColor: '#D1DAEB', fontSize: 12 }}
-                  />
-                  <Bar dataKey="prob" radius={[0, 4, 4, 0]}>
-                    <LabelList
-                      dataKey="prob"
-                      position="right"
-                      formatter={(val: any) => `${val}%`}
-                      style={{ fontSize: 11, fontWeight: 700, fill: '#071D38' }}
-                    />
-                    {probChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-full w-full flex flex-col justify-between py-1 select-none">
+                {/* Horizontal Bar Chart Body with Vertical Grid Lines */}
+                <div className="flex-1 flex flex-col justify-around relative py-2">
+                  {/* Vertical dashed grid lines aligned with 0%, 25%, 50%, 75%, 100% */}
+                  <div className="absolute inset-0 left-[180px] right-16 pointer-events-none">
+                    <div className="w-full h-full relative">
+                      <div className="absolute left-[0%] top-0 bottom-0 border-r border-navy-300/40" />
+                      <div className="absolute left-[25%] top-0 bottom-0 border-r border-dashed border-navy-100" />
+                      <div className="absolute left-[50%] top-0 bottom-0 border-r border-dashed border-navy-100" />
+                      <div className="absolute left-[75%] top-0 bottom-0 border-r border-dashed border-navy-100" />
+                      <div className="absolute left-[100%] top-0 bottom-0 border-r border-navy-300/40" />
+                    </div>
+                  </div>
+
+                  {/* 4 Quadrant Horizontal Bars */}
+                  {probChartData.map((item) => (
+                    <div key={item.code} className="flex items-center h-10 relative z-10 group">
+                      {/* Y-axis category label */}
+                      <div className="w-[180px] pr-3.5 text-right text-xs font-semibold text-navy truncate">
+                        {item.state}
+                      </div>
+
+                      {/* Bar and Percentage Label */}
+                      <div className="flex-1 pr-16 flex items-center h-full relative">
+                        <div
+                          className="h-7 rounded-r-md transition-all duration-500 shadow-sm flex items-center pr-2 group-hover:brightness-95"
+                          style={{
+                            width: `${Math.max(item.prob, 1.5)}%`,
+                            backgroundColor: item.color,
+                          }}
+                        />
+                        <span className="ml-2.5 font-mono text-xs font-bold text-navy">
+                          {item.prob}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* X-axis scale with 0%, 25%, 50%, 75%, 100% */}
+                <div className="flex items-center pt-2 border-t border-navy-200/80 text-2xs text-navy-400 font-mono">
+                  <div className="w-[180px] pr-3.5 text-right">0%</div>
+                  <div className="flex-1 pr-16 relative h-4">
+                    <span className="absolute left-[25%] -translate-x-1/2">25%</span>
+                    <span className="absolute left-[50%] -translate-x-1/2">50%</span>
+                    <span className="absolute left-[75%] -translate-x-1/2">75%</span>
+                    <span className="absolute left-[100%] -translate-x-1/2">100%</span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
